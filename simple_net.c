@@ -1,5 +1,6 @@
 /* code taken and adapted from http://www.ecst.csuchico.edu/~beej/guide/net/ */
 
+#include <stdio.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -19,11 +20,13 @@ int create_service(unsigned short port, int queue_size)
 
    if ((fd = socket(AF_INET, SOCK_STREAM, 0)) == -1)
    {
+      perror("Port ");
       return -1;
    }
 
    if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1)
    {
+      perror("SetSockOpt ");
       return -1;
    }
         
@@ -34,11 +37,13 @@ int create_service(unsigned short port, int queue_size)
 
    if (bind(fd, (struct sockaddr *)&local_addr, sizeof(struct sockaddr)) == -1)
    {
+      perror("Bind ");
       return -1;
    }
 
    if (listen(fd, queue_size) == -1)
    {
+      perror("Listen ");
       return -1;
    }
 

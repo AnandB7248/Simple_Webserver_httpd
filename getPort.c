@@ -9,17 +9,13 @@
 
 unsigned short getPort(int argc, char* argv[])
 {
-   unsigned short status;
-
    if(argc != 2)
    {
       fprintf(stderr, "usage: httpd [port] \n");
       exit(-1);
    }
 
-   status = isPosNum(argv[1]);
-
-   if(status == FALSE)
+   if(!isPosNum(argv[1]))
    {
       fprintf(stderr, "Error: [port] must be a positive number \n");  
       exit(-1); 

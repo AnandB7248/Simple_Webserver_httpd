@@ -4,7 +4,7 @@
 #include <sys/wait.h>
 #include <signal.h>
 
-void sigchld_setup(int signo)
+void signal_setup(int signo)
 {
    struct sigaction action;
 
@@ -14,7 +14,7 @@ void sigchld_setup(int signo)
       exit(-1);
    }
    action.sa_flags = 0;
-   action.sa_handler = handle_sigchld;
+   action.sa_handler = signal_handler;
 
    if(sigaction(signo, &action, NULL) == -1)
    {
@@ -23,9 +23,8 @@ void sigchld_setup(int signo)
    }
 }
 
-void handle_sigchld(int signo)
+void signal_handler(int signo)
 {  
-   /* Signal */
    if(signo == SIGCHLD)
    {
       while(waitpid(-1, NULL, WNOHANG) > 0);

@@ -3,7 +3,7 @@
 
 #include <signal.h>
 
-void sigchld_setup(int signo);
-void handle_sigchld(int signo);
+void signal_setup(int signo);
+void signal_handler(int signo);
 
 #endif

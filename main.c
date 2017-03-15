@@ -12,7 +12,6 @@
 #include "limit_fork.h"
 
 #define QUEUE_SIZE 15
-#define _XOPEN_SOURCE
 
 int main(int argc, char* argv[])
 {
@@ -23,7 +22,7 @@ int main(int argc, char* argv[])
    pid_t pid;
 
    limit_fork(25);
-   sigchld_setup(SIGCHLD);
+   signal_setup(SIGCHLD);
 
    while(1)
    {
@@ -33,6 +32,7 @@ int main(int argc, char* argv[])
          fprintf(stderr, "Fail to accept connection.\n");
          exit(-1);
       }
+      printf("Received a connection\n");
 
       /* Handle connection request */
       pid = checked_fork();
@@ -40,7 +40,7 @@ int main(int argc, char* argv[])
       if(pid == 0)
       { /* Child Process - Client */
          close(socketFD);
-         handle_request(newSocketFD); /* Up to the child to eventually terminate and clean up resources */
+         handle_request(newSocketFD);
       }
       else
       { /* Parent Process */

@@ -9,7 +9,6 @@
 #include "checked.h"
 #include "handle_request.h"
 #include "signal_handler.h"
-#include "limit_fork.h"
 
 #define QUEUE_SIZE 15
 
@@ -22,8 +21,6 @@ int main(int argc, char* argv[])
    int newSocketFD;
    pid_t pid;
 
-   limit_fork(101);
-
    /* Setup a signal handler that will wait for terminated child processes */
    signal_setup(SIGCHLD);
 
@@ -35,7 +32,7 @@ int main(int argc, char* argv[])
          fprintf(stderr, "accept_connection failure\n");
          exit(-1);
       }
-
+      printf("Received a new connection\n");
       pid = checked_fork();
 
       if(pid == 0)

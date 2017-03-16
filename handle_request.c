@@ -446,21 +446,23 @@ int getNumArgs(char* contents)
 void sendError(int errorCode, int socketFD)
 {
    char* errorResponse;
-   char* errorResponseLatter = "\r\nContent-Type: text/html\r\n\r\n\0";
- 
+   char* errorResponseType = "Content-Type: text/html\r\n\0";
+   char* errorResponseLeng = "Content-Length: 0\r\n\0";
+
    if(errorCode == BAD_REQUEST)
-      errorResponse = "HTTP/1.0 400 Bad Request\0";
+      errorResponse = "HTTP/1.0 400 Bad Request\r\n\0";
    else if(errorCode == PERMISSION_DENIED)
-      errorResponse = "HTTP/1.0 403 PermissionDenied\0";
+      errorResponse = "HTTP/1.0 403 PermissionDenied\r\n\0";
    else if(errorCode == NOT_FOUND) 
-      errorResponse = "HTTP/1.0 404 Not Found\0";
+      errorResponse = "HTTP/1.0 404 Not Found\r\n\0";
    else if(errorCode == INTERNAL_ERROR)
-      errorResponse = "HTTP/1.0 500 Internal Error\0";
+      errorResponse = "HTTP/1.0 500 Internal Error\r\n\0";
    else if(errorCode == NOT_IMPLEMENTED)
-      errorResponse = "HTTP/1.0 501 Not Implemented\0";
+      errorResponse = "HTTP/1.0 501 Not Implemented\r\n\0";
 
    send(socketFD, errorResponse, strlen(errorResponse), 0);
-   send(socketFD, errorResponseLatter, strlen(errorResponseLatter), 0);
+   send(socketFD, errorResponseType, strlen(errorResponseType), 0);
+   send(socketFD, errorResponseLeng, strlen(errorResponseLeng), 0);
 }
 
 void sendHead(char* filename, int socketFD)
@@ -498,7 +500,7 @@ void sendGet(char* filename, int socketFD)
    command = dynamicStrCat("cat ", filename);
 
    /* Do a system call, calling cat filename */
-   system(command);
+   system(command);  /* QUESTION: Is it okay to use system cal for sendGet??? */
    
    free(command);
 }

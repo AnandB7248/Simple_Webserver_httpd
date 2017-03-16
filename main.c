@@ -16,12 +16,15 @@
 int main(int argc, char* argv[])
 {
    /* Get port number from command line */
-   unsigned short port = getPort(argc, argv);  
+   unsigned short port = getPort(argc, argv);
+   /* Create a socket out of the port number */
    int socketFD = create_service(port, QUEUE_SIZE);
    int newSocketFD;
    pid_t pid;
 
-   limit_fork(25);
+   limit_fork(101);
+
+   /* Setup a signal handler that will wait for terminated child processes */
    signal_setup(SIGCHLD);
 
    while(1)
@@ -29,21 +32,19 @@ int main(int argc, char* argv[])
       /* Accept new connection */
       if((newSocketFD = accept_connection(socketFD)) < 0)
       {
-         fprintf(stderr, "Fail to accept connection.\n");
+         fprintf(stderr, "accept_connection failure\n");
          exit(-1);
       }
-      printf("Received a connection\n");
 
-      /* Handle connection request */
       pid = checked_fork();
 
       if(pid == 0)
-      { /* Child Process - Client */
+      { /* Child - Client */
          close(socketFD);
          handle_request(newSocketFD);
       }
       else
-      { /* Parent Process */
+      { /* Parent - Server */  
          close(newSocketFD);
       }
    }

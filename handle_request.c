@@ -92,7 +92,7 @@ void handle_request(int socket)
       }
       /* If cgi-like switch not given */
          /* We know file exists with readbit set, due to parseReq checking for these informations. */
-      else if(cgiSwitch == FALSE)
+      else
       {
          if(typeSwitch == HEAD_SWITCH)
             sendHead(filename, socket);
@@ -156,7 +156,21 @@ int parseReq(char* request, char** filename, int* typeS, int* cgiS)
    /* If cgi is requested */
    if(isCgiLike(*filename))
    {
-      *cgiS = TRUE;
+      if(cgiContainsArgs(*filename))
+         *cgiS = TRUE;
+      else
+      {
+         if(!fileExists(*filename))
+         {
+            free(*filename);
+            return NOT_FOUND;
+         }
+         
+         if(isRegFile(*filename))
+            *cgiS = FALSE;
+         else
+            *cgiS = TRUE;
+      }
    }
    else
    {  /* No cgi-request, should be a file or directory*/
@@ -288,7 +302,8 @@ int execCgiWithArgs(char* filename, char** nameOfNewTmpFile)
 
    /* Count the number plus the number of arguments plus null terminator */
    numArgs = getNumArgs(filename);
-   execArgs = (char**) malloc(sizeof(char**)*(numArgs + 1));   /* 2 is, one for the cmd, and one for the command line null terminator */
+
+   execArgs = (char**) malloc( sizeof(char**) * (numArgs+2));   /* 2 is, one for the cmd, and one for the command line null terminator */
    cmd = strtok(filename, "?");     
 
    /* Validate if cmd is valid */
@@ -304,6 +319,7 @@ int execCgiWithArgs(char* filename, char** nameOfNewTmpFile)
       arg = strtok(NULL, "&");
       execArgs[i] = arg;
    }
+
    execArgs[i] = NULL;
 
    pid = fork();
@@ -315,7 +331,7 @@ int execCgiWithArgs(char* filename, char** nameOfNewTmpFile)
    }
    else if(pid == 0) /* Child Process*/
    {
-      if(snprintf(tmpFile, MAX, "%d", getpid()) < 0)
+      if(snprintf(tmpFile, MAX, ".%d", getpid()) < 0)
       {
          free(execArgs);
          return -1;
@@ -346,7 +362,7 @@ int execCgiWithArgs(char* filename, char** nameOfNewTmpFile)
    {
       free(execArgs);
 
-      if(snprintf(tmpFile, MAX, "%d", pid) < 0)
+      if(snprintf(tmpFile, MAX, ".%d", pid) < 0)
       {
          return -1;
       }
@@ -467,11 +483,6 @@ char* prependDot(char* name)
    char* newName;
    int newLength;
 
-   if(name == NULL)
-   {
-      return NULL;
-   }
-
    length = strlen(name);
    /* Malloc size of: length = current name */
    /*                      1 = for "."     */
@@ -512,6 +523,24 @@ int usrReadBitSet(char* name)
    getPermissionBits(name, &permissionBits);
 
    if(permissionBits[1] == 'r')
+   {
+      free(permissionBits);
+      return TRUE;
+   }
+   else
+   {
+      free(permissionBits);
+      return FALSE;
+   }
+}
+
+int isRegFile(char* name)
+{
+   char* permissionBits;
+
+   getPermissionBits(name, &permissionBits);
+
+   if((permissionBits[0] == '-') && (permissionBits[1] == 'r') && (permissionBits[3] == '-'))
    {
       free(permissionBits);
       return TRUE;

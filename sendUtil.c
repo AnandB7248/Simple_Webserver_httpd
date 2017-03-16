@@ -10,7 +10,6 @@
 #include "handle_request.h"
 #include "readline.h"
 #include "getPermBits.h"
-#include "dynamicStrCat.h"
 
 /* ---- Error Codes ---- */
 #define ERROR_LIMIT 400

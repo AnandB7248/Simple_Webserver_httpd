@@ -53,5 +53,7 @@ int startsWithSlash(char*);
 
 int fileIsDir(char* name);
 
+int isRegFile(char*);
+
 int usrReadBitSet(char* name);
 #endif

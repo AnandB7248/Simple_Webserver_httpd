@@ -10,7 +10,8 @@
 #include "handle_request.h"
 #include "readline.h"
 #include "getPermBits.h"
-#include "sendUtil.h"
+#include "dynamicStrCat.h"
+
 /* ---- Error Codes ---- */
 #define ERROR_LIMIT 400
 #define BAD_REQUEST 400
@@ -24,179 +25,6 @@
 #define GET_SWITCH 1
 #define HEAD_SWITCH 2
 #define MAX 101
-
-void handle_request(int socket)
-{
-   char* request;
-   char* filename;
-   char* tmpFile;
-   int status;
-   int typeSwitch;
-   int cgiSwitch;
-   FILE* client = fdopen(socket, "r");
-
-   /* If fdopen did not work */
-   if(client == NULL)
-   {
-      sendError(INTERNAL_ERROR, socket);
-      fclose(client);
-      close(socket);
-      exit(-1);
-   }
-
-   /* Receive a request from the client */
-   request = readline(client); /* NOTE: request should be freed at some point!*/
-
-   /* parseReq determines if the request is valid by convention. */
-   /* If invalid request, proper status error code will be returned */
-   /* Which will lead to send of error back to client*/
-   if((status = parseReq(request, &filename, &typeSwitch, &cgiSwitch)) >= ERROR_LIMIT)
-   {
-      free(request);
-      sendError(status, socket);
-      fclose(client);
-      close(socket);
-      exit(-1);
-   }
-   else 
-   {
-      /* If cgi-like switch given */
-      if(cgiSwitch == TRUE)
-      {
-         if(execCgiCmd(filename, &tmpFile) < 0)
-         {
-            free(filename);
-            free(request);
-            sendError(INTERNAL_ERROR, socket);
-            fclose(client);
-            close(socket);
-            exit(-1);
-         }
-         else
-         {
-            if(typeSwitch == HEAD_SWITCH)
-               sendHead(tmpFile, socket); 
-            else if(typeSwitch == GET_SWITCH)
-               sendGet(tmpFile, socket);  
-
-            if(remove(tmpFile) < 0)
-            {
-               free(tmpFile);
-               sendError(INTERNAL_ERROR, socket);
-               fclose(client);
-               close(socket);
-               exit(-1);
-            }
-         }
-         free(tmpFile);
-      }
-      /* If cgi-like switch not given */
-         /* We know file exists with readbit set, due to parseReq checking for these informations. */
-      else if(cgiSwitch == FALSE)
-      {
-         if(typeSwitch == HEAD_SWITCH)
-            sendHead(filename, socket);
-         else if(typeSwitch == GET_SWITCH)
-            sendGet(filename, socket);
-      }
-   }
-   
-   /* Clean up resources */
-   free(request);
-   free(filename);
-   fclose(client);
-   close(socket);
-   exit(0);
-}
-
-int parseReq(char* request, char** filename, int* typeS, int* cgiS)
-{
-   char* partOfRequest;
-   char* httpV;
-   char* type;
-   int numItems = 0;
-
-   /* Request expected proper usage: TYPE filename HTTP/verson */
-   partOfRequest = strtok(request, " ");
-   while(partOfRequest)
-   {
-      if(numItems == 0)
-         type = partOfRequest;
-      if(numItems == 1)
-         *filename = partOfRequest; /* *filename will be stored and can be used out of this function */
-      if(numItems == 2)
-         httpV = partOfRequest;
-
-      partOfRequest = strtok(NULL, " ");
-      numItems++;
-   }
-
-   /* Proper request format: TYPE filename HTTP/version */
-   /* So a proper request format should have 3 items */
-   if(numItems != 3)
-      return BAD_REQUEST; /* Error 400 */
-
-   /* If TYPE is not GET or HEAD, send Error 501 */
-   if((strcmp(type, "GET") != 0) && (strcmp(type, "HEAD") != 0))
-      return NOT_IMPLEMENTED; /* Error 501 */
-
-   /* Modify filename so it starts with a "." */
-   /* This will be very helpful to find filename as search starts from the working directory of the server */
-   /* And the client will most likely not place "." in front of the filename */
-
-   *filename = prependDot(*filename);
-
-   /* Check if filename is trying to access directory: ".." */
-   if((strstr(*filename, "..") != NULL) || (strstr(*filename, "~/") != NULL))
-   {
-      free(*filename);
-      return BAD_REQUEST; /* Not sure what error to send here */
-   }
-
-   /* If cgi is requested */
-   if(isCgiLike(*filename))
-   {
-      *cgiS = TRUE;
-   }
-   else
-   {  /* No cgi-request, should be a file or directory*/
-      *cgiS = FALSE;
-
-      /* Check if file exists */
-      if(!fileExists(*filename))
-      {
-         free(*filename);
-         return NOT_FOUND; /* Error 404 */
-      }
-
-      /* Check if filename leads to just a directory */
-      if(fileIsDir(*filename))
-      {
-         free(*filename);
-         return BAD_REQUEST; /* Error 400 */
-      }
-         
-      /* Check if there is a read permission for file */
-      if(!usrReadBitSet(*filename))
-      {
-         free(*filename);
-         return PERMISSION_DENIED; /* Error 403 */
-      }
-   }
-
-   /* http */
-   /* If request line does not contain "HTTP/", send error 400*/
-   if(!isValidHttp(httpV))
-   {
-      free(*filename);
-      return BAD_REQUEST; /* Error 400*/
-   }
-
-   /* Set typeswitch */ 
-   *typeS = retTypeSwitch(type); /* QUESTION: Would there be a reason where we would need to somehow safe and later reference http/version??? */
-
-   return 1;
-}
 
 int execCgiCmd(char* filename, char** nameOfNewTmpFile)
 {
@@ -387,6 +215,102 @@ int getNumArgs(char* contents)
    }
 
    return numArgs;
+}
+
+void sendError(int errorCode, int socketFD)
+{
+   char* errorResponse;
+   char* errorResponseType = "Content-Type: text/html\r\n\0";
+   char* errorResponseLeng = "Content-Length: 0\r\n\r\n\0";
+
+   if(errorCode == BAD_REQUEST)
+      errorResponse = "HTTP/1.0 400 Bad Request\r\n\0";
+   else if(errorCode == PERMISSION_DENIED)
+      errorResponse = "HTTP/1.0 403 Permission Denied\r\n\0";
+   else if(errorCode == NOT_FOUND) 
+      errorResponse = "HTTP/1.0 404 Not Found\r\n\0";
+   else if(errorCode == INTERNAL_ERROR)
+      errorResponse = "HTTP/1.0 500 Internal Error\r\n\0";
+   else if(errorCode == NOT_IMPLEMENTED)
+      errorResponse = "HTTP/1.0 501 Not Implemented\r\n\0";
+
+   send(socketFD, errorResponse, strlen(errorResponse), 0);
+   send(socketFD, errorResponseType, strlen(errorResponseType), 0);
+   send(socketFD, errorResponseLeng, strlen(errorResponseLeng), 0);
+}
+
+void sendHead(char* filename, int socketFD)
+{
+   char buffer[MAX];
+   unsigned long contentLength;
+   char* headFirstPart = "HTTP/1.0 200 OK\r\nContent-Type: text/html\r\nContent-Length: \0";
+   char* headSecondPart = "\r\n\r\n";
+   struct stat buf;
+
+   if(stat(filename, &buf))
+   {
+      /* If stat does not work, send internal error and exit */
+      sendError(INTERNAL_ERROR, socketFD);
+   }
+
+   contentLength = (long) buf.st_size;
+   sprintf(buffer, "%ld", contentLength);
+
+   send(socketFD, headFirstPart, strlen(headFirstPart), 0);
+   send(socketFD, buffer, strlen(buffer), 0);
+   send(socketFD, headSecondPart, strlen(headSecondPart), 0);
+}
+
+void sendGet(char* filename, int socketFD)
+{
+   pid_t pid;
+   char buffer[MAX];
+   unsigned long contentLength;
+   char* headFirstPart = "HTTP/1.0 200 OK\r\nContent-Type: text/html\r\nContent-Length: \0";
+   char* headSecondPart = "\r\n\r\n";
+   struct stat buf;
+
+   if(stat(filename, &buf))
+   {
+      /* If stat does not work, send internal error and exit */
+      sendError(INTERNAL_ERROR, socketFD);
+   }
+
+   contentLength = (long) buf.st_size;
+   sprintf(buffer, "%ld", contentLength);
+
+   send(socketFD, headFirstPart, strlen(headFirstPart), 0);
+   send(socketFD, buffer, strlen(buffer), 0);
+   send(socketFD, headSecondPart, strlen(headSecondPart), 0);
+
+   /* dup stdout to socketFD */
+   if(dup2(socketFD, STDOUT_FILENO) < 0)
+   {
+      sendError(INTERNAL_ERROR, socketFD);
+   }
+
+   pid = fork();
+   if(pid < 0)
+   {
+      sendError(INTERNAL_ERROR, socketFD);
+   }
+   else if(pid == 0)
+   {
+      if(execl("/bin/cat", "cat", filename, (char*) NULL) < 0)
+      {
+         perror("execlp");
+         exit(-1);
+      }
+   }
+   else
+   {
+      wait(NULL);
+   }
+   /* command = dynamicStrCat("cat ", filename);
+
+   system(command);  
+   
+   free(command);*/
 }
 
 int isValidHttp(char* httpV)

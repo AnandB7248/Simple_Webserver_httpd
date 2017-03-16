@@ -23,32 +23,33 @@ int parseReq(char* request, char** filename, int* typeSwitch, int* cgiSwitch);
 
 int execCgiCmd(char*, char**);
 
+int execCgiWithArgs(char*, char**);
+
+int execCgiNoArgs(char*, char**);
+
 /* Boolean function, checks to see /cgi-like/(contents) */
 /* if contents has "?", if no ?, then no arguments. */
 int cgiContainsArgs(char* contents);
 
 int getNumArgs(char*);
 
-void sendError(int errorCode, int socketFD);
-
-void sendHead(char* filename, int socketFD);
-
-void sendGet(char* filename, int socketFD);
-
 int isValidHttp(char*);
+
+int isValidCmd(char*);
 
 /* Boolean function */
 /* Checks if filename has cgi-like request */
 /* e.g. [/cgi-like/... ]*/
-int cgiRequested(char* filename);
+int isCgiLike(char* filename);
 
 /* Preconditions: type value is either "GET" or "HEAD" */
 int retTypeSwitch(char* type);
 
 int fileExists(char*);
 
-/* Modifies the name that is passed in to have it start with "./" */
-char* convNameToCurDir(char* name);
+char* prependDot(char* name);
+
+int startsWithSlash(char*);
 
 int fileIsDir(char* name);
 

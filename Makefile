@@ -8,8 +8,8 @@ all : $(MAIN)
 $(MAIN) : $(OBJS) $(HEADER)
 	$(CC) $(CFLAGS) -o $(MAIN) $(OBJS)
 
-main.o : simple_net.c getPort.c checked.c handle_request.c signal_handler.c
-	$(CC) $(CFLAGS) -c main.c simple_net.c getPort.c checked.c handle_request.c signal_handler.c
+main.o : simple_net.c getPort.c checked.c handle_request.c signal_handler.c sendUtil.c sendUtil.h
+	$(CC) $(CFLAGS) -c main.c simple_net.c getPort.c checked.c handle_request.c signal_handler.c sendUtil.c
 simple_net.o : simple_net.c simple_net.h
 	$(CC) $(CFLAGS) -c simple_net.c
 getPort.o : getPort.c getPort.h

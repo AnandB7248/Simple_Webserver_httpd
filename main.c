@@ -9,7 +9,9 @@
 #include "checked.h"
 #include "handle_request.h"
 #include "signal_handler.h"
+#include "sendUtil.h"
 
+#define INTERNAL_ERROR 500
 #define QUEUE_SIZE 15
 
 int main(int argc, char* argv[])
@@ -32,17 +34,25 @@ int main(int argc, char* argv[])
          fprintf(stderr, "accept_connection failure\n");
          exit(-1);
       }
-      printf("Received a new connection\n");
-      pid = checked_fork();
 
-      if(pid == 0)
-      { /* Child - Client */
-         close(socketFD);
-         handle_request(newSocketFD);
+      pid = fork();
+      /* Fork failed, Internal Error */
+      if(pid < 0)
+      {
+         sendError(INTERNAL_ERROR,newSocketFD);
+         close(newSocketFD);
       }
       else
-      { /* Parent - Server */  
-         close(newSocketFD);
+      {
+         if(pid == 0)
+         { /* Child - Client */
+            close(socketFD);
+            handle_request(newSocketFD);
+         }
+         else
+         { /* Parent - Server */  
+            close(newSocketFD);
+         }
       }
    }
 

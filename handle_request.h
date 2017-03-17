@@ -3,6 +3,11 @@
 
 void handle_request(int);
 
+/* -------------------------------------------------- *
+ * -----------------HELPER METHODS------------------- *
+ * -------------------------------------------------- *
+ */
+
 /* Parses the request value from the client */
 /* Function also checks for errors and returns the error codes if such an error is present */
 /* Function sets typeswitch: */
@@ -21,26 +26,11 @@ void handle_request(int);
 /*                501 - Not Implemented */
 int parseReq(char* request, char** filename, int* typeSwitch, int* cgiSwitch);
 
-int execCgiCmd(char*, char**);
-
-int execCgiWithArgs(char*, char**);
-
-int execCgiNoArgs(char*, char**);
-
-/* Boolean function, checks to see /cgi-like/(contents) */
-/* if contents has "?", if no ?, then no arguments. */
-int cgiContainsArgs(char* contents);
-
 int getNumArgs(char*);
 
 int isValidHttp(char*);
 
 int isValidCmd(char*);
-
-/* Boolean function */
-/* Checks if filename has cgi-like request */
-/* e.g. [/cgi-like/... ]*/
-int isCgiLike(char* filename);
 
 /* Preconditions: type value is either "GET" or "HEAD" */
 int retTypeSwitch(char* type);
@@ -56,4 +46,5 @@ int fileIsDir(char* name);
 int isRegFile(char*);
 
 int usrReadBitSet(char* name);
+
 #endif

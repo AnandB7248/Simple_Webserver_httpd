@@ -18,13 +18,19 @@ int main(int argc, char* argv[])
 {
    /* Get port number from command line */
    unsigned short port = getPort(argc, argv);
-   /* Create a socket out of the port number */
-   int socketFD = create_service(port, QUEUE_SIZE);
+   int socketFD;
    int newSocketFD;
    pid_t pid;
 
    /* Setup a signal handler that will wait for terminated child processes */
    signal_setup(SIGCHLD);
+
+
+   if((socketFD = create_service(port, QUEUE_SIZE)) < 0)
+   {
+      fprintf(stderr, "Failed to create service to port %d\n", port);
+      exit(-1);
+   }
 
    while(1)
    {

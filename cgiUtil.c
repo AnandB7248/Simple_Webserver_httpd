@@ -144,14 +144,13 @@ int execCgiWithArgs(char* filename, char** nameOfNewTmpFile)
          free(execArgs);
          return -1;
       }
-            
+
       if(dup2(tmpFD, STDOUT_FILENO) < 0)
       {
          free(execArgs);
          close(tmpFD);
          return -1;
       }
-
       if((execvp(execArgs[0], execArgs)) < 0)
       {
          free(execArgs);

@@ -110,6 +110,10 @@ void handle_request(int socket)
    exit(0);
 }
 
+/* ------------------------------------------------------------------------------------------------ */
+/* ------------------------------------------HELPER METHODS---------------------------------------- */
+/* ------------------------------------------------------------------------------------------------ */
+
 int parseReq(char* request, char** filename, int* typeS, int* cgiS)
 {
    char* partOfRequest;
@@ -124,7 +128,7 @@ int parseReq(char* request, char** filename, int* typeS, int* cgiS)
       if(numItems == 0)
          type = partOfRequest;
       if(numItems == 1)
-         *filename = partOfRequest; /* *filename will be stored and can be used out of this function */
+         *filename = partOfRequest; /* *filename value will be stored and will be used in other functions */
       if(numItems == 2)
          httpV = partOfRequest;
 
@@ -144,14 +148,13 @@ int parseReq(char* request, char** filename, int* typeS, int* cgiS)
    /* Modify filename so it starts with a "." */
    /* This will be very helpful to find filename as search starts from the working directory of the server */
    /* And the client will most likely not place "." in front of the filename */
-
    *filename = prependDot(*filename);
 
-   /* Check if filename is trying to access directory: ".." */
+   /* Check if filename is trying to access directory: ".." or "~/", as we want to limit the areas where the client can access */
    if((strstr(*filename, "..") != NULL) || (strstr(*filename, "~/") != NULL))
    {
       free(*filename);
-      return BAD_REQUEST; /* Not sure what error to send here */
+      return BAD_REQUEST;
    }
 
    /* If cgi is requested */
@@ -174,7 +177,7 @@ int parseReq(char* request, char** filename, int* typeS, int* cgiS)
       }
    }
    else
-   {  /* No cgi-request, should be a file or directory*/
+   {  /* No cgi-request, so requested filename should just be a file or directory*/
       *cgiS = FALSE;
 
       /* Check if file exists */
@@ -208,10 +211,11 @@ int parseReq(char* request, char** filename, int* typeS, int* cgiS)
    }
 
    /* Set typeswitch */ 
-   *typeS = retTypeSwitch(type); /* QUESTION: Would there be a reason where we would need to somehow safe and later reference http/version??? */
+   *typeS = retTypeSwitch(type);
 
    return 1;
 }
+
 
 int getNumArgs(char* contents)
 {

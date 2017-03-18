@@ -1,10 +1,17 @@
 #ifndef CGI_UTIL_H
 #define CGI_UTIL_H
 
+/* Main function */
 int execCgiCmd(char*, char**);
 
+/* --------------------------------------------- */
+/* ------------------HELPER METHODS------------- */
+/* --------------------------------------------- */
+
+/* Function is executed when clients request is a cgi-like where the cmd has arguments */
 int execCgiWithArgs(char*, char**);
 
+/* Function is executed when clients request is a cgi-like where the cmd has no arguments */
 int execCgiNoArgs(char*, char**);
 
 /* Boolean function, checks to see /cgi-like/(contents) */
